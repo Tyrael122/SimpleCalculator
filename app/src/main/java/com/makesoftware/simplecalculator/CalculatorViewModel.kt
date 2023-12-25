@@ -12,15 +12,57 @@ class CalculatorViewModel : ViewModel() {
     val uiState = _uiState.asStateFlow()
 
     fun onButtonPressed(char: String) {
-        _uiState.value = uiState.value.copy(
-            expression = "${uiState.value.expression}$char"
-        )
+        when (char) {
+            in CalculatorButtonType.OPERATOR.listOfChars -> addToExpressionList(
+                char, CalculatorButtonType.OPERATOR
+            )
+
+            in CalculatorButtonType.CLEAR.listOfChars -> onClearPressed()
+            in CalculatorButtonType.EQUALS.listOfChars -> onEqualsPressed()
+            else -> addInputToExpressionList(char)
+        }
     }
 
-    fun onEqualsPressed() {
+    private fun addInputToExpressionList(char: String) {
         val expression = uiState.value.expression
+        val lastInput = expression.lastOrNull()
+
+        if (lastInput == null || lastInput.type == CalculatorButtonType.OPERATOR) {
+            addToExpressionList(char, CalculatorButtonType.INPUT_TO_EXPRESSION)
+            return
+        }
+
+        val newExpression = expression.toMutableList()
+        newExpression.removeLast()
+        newExpression.add(
+            InputText(
+                lastInput.text + char, CalculatorButtonType.INPUT_TO_EXPRESSION
+            )
+        )
+
+        _uiState.update {
+            it.copy(
+                expression = newExpression
+            )
+        }
+    }
+
+    private fun addToExpressionList(char: String, calculatorButtonType: CalculatorButtonType) {
+        val newExpression = uiState.value.expression.toMutableList()
+        newExpression.add(InputText(char, calculatorButtonType))
+
+        _uiState.update {
+            it.copy(
+                expression = newExpression
+            )
+        }
+    }
+
+    private fun onEqualsPressed() {
+        val textExpression = uiState.value.expression.joinToString("") { it.text }.replace("x", "*")
+
         val result = try {
-            val floatValue = Expression(expression).evaluate().numberValue.toFloat()
+            val floatValue = Expression(textExpression).evaluate().numberValue.toFloat()
             if (floatValue % 1 == 0F) {
                 floatValue.toInt()
             } else {
@@ -39,18 +81,31 @@ class CalculatorViewModel : ViewModel() {
 
         _uiState.update {
             it.copy(
-                expression = result.toString()
+                result = result.toString()
             )
         }
     }
 
-    fun onClearPressed() {
+    private fun onClearPressed() {
         _uiState.value = uiState.value.copy(
-            expression = "", result = "", error = ""
+            expression = emptyList(), result = "", error = ""
         )
     }
 }
 
 data class CalculatorUiState(
-    val expression: String = "", val result: String = "", val error: String = ""
+    val expression: List<InputText> = emptyList(), val result: String = "", val error: String = ""
 )
+
+class InputText(
+    val text: String, val type: CalculatorButtonType
+)
+
+enum class CalculatorButtonType(val listOfChars: List<String>) {
+    INPUT_TO_EXPRESSION(emptyList()), OPERATOR(
+        listOf(
+            "+", "-", "x", "/"
+        )
+    ),
+    CLEAR(listOf("C")), EQUALS(listOf("="))
+}
