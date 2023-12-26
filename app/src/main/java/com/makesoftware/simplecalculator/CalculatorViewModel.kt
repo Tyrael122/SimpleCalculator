@@ -18,7 +18,33 @@ class CalculatorViewModel : ViewModel() {
 
             in CalculatorButtonType.CLEAR.listOfChars -> onClearPressed()
             in CalculatorButtonType.EQUALS.listOfChars -> onEqualsPressed()
+            in CalculatorButtonType.BACKSPACE.listOfChars -> onBackspacePressed()
             else -> addInputToExpressionList(char)
+        }
+    }
+
+    private fun onBackspacePressed() {
+        val expression = uiState.value.expressions
+        val lastInput = expression.lastOrNull() ?: return
+
+        val newExpression = expression.toMutableList()
+        newExpression.removeLast()
+
+        if (lastInput.type == CalculatorButtonType.INPUT_TO_EXPRESSION) {
+            val newText = lastInput.text.substring(0, lastInput.text.length - 1)
+            if (newText.isNotEmpty()) {
+                newExpression.add(
+                    InputText(
+                        newText, CalculatorButtonType.INPUT_TO_EXPRESSION
+                    )
+                )
+            }
+        }
+
+        _uiState.update {
+            it.copy(
+                expressions = newExpression
+            )
         }
     }
 
@@ -136,11 +162,5 @@ enum class CalculatorButtonType(val listOfChars: List<String>) {
             "+", "-", "x", "/", "%", "√", "()"
         )
     ),
-    CLEAR(listOf("C")), EQUALS(listOf("="));
-
-    companion object {
-        fun fromChar(char: String): CalculatorButtonType {
-            return values().firstOrNull { it.listOfChars.contains(char) } ?: INPUT_TO_EXPRESSION
-        }
-    }
+    CLEAR(listOf("C")), EQUALS(listOf("=")), BACKSPACE(listOf("⌫"));
 }

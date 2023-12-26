@@ -15,15 +15,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardReturn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,29 +57,26 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-val LocalCalculatorViewModel = compositionLocalOf { CalculatorViewModel() }
 val operatorWithSpaces = listOf("+", "-", "/", "x")
 
 @Composable
-fun CalculatorApp(modifier: Modifier = Modifier) {
+fun CalculatorApp(
+    modifier: Modifier = Modifier, viewModel: CalculatorViewModel = viewModel()
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
         modifier = modifier.fillMaxSize()
     ) {
-        val viewModel: CalculatorViewModel = viewModel()
         val uiState by viewModel.uiState.collectAsState()
 
-        CompositionLocalProvider(
-            LocalCalculatorViewModel provides viewModel
-        ) {
-            TextView(expressions = uiState.expressions,
-                result = uiState.error.ifEmpty { uiState.result })
+        TextView(
+            expressions = uiState.expressions,
+            result = uiState.error.ifEmpty { uiState.result })
 
-            Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(20.dp))
 
-            CalculatorButtons()
-        }
+        CalculatorButtons(viewModel::onButtonPressed)
     }
 }
 
@@ -123,15 +121,13 @@ private fun TextView(expressions: List<InputText>, result: String) {
 }
 
 @Composable
-fun CalculatorButtons() {
-    val viewModel = LocalCalculatorViewModel.current
-
+fun CalculatorButtons(onButtonPressed: (String) -> Unit) {
     val buttons = listOf(
         listOf("C", "√", "()", "/"),
         listOf("7", "8", "9", "x"),
         listOf("4", "5", "6", "-"),
         listOf("1", "2", "3", "+"),
-        listOf("", "0", ".", "=")
+        listOf("⌫", "0", ".", "=")
     )
 
     Column(
@@ -146,9 +142,9 @@ fun CalculatorButtons() {
                 row.forEachIndexed { columnIndex, char ->
                     val buttonTextColor = generateButtonTextColor(columnIndex, rowIndex)
 
-                    DefaultButton(char = char, textColor = buttonTextColor, onClick = {
-                        viewModel.onButtonPressed(char)
-                    })
+                    DefaultButton(
+                        char = char, textColor = buttonTextColor, onClick = onButtonPressed
+                    )
                 }
             }
         }
@@ -181,10 +177,10 @@ fun DefaultRow(content: @Composable () -> Unit) {
 
 @Composable
 fun DefaultButton(
-    modifier: Modifier = Modifier, char: String, textColor: Color, onClick: () -> Unit
+    modifier: Modifier = Modifier, char: String, textColor: Color, onClick: (String) -> Unit
 ) {
     Button(
-        onClick = { onClick() },
+        onClick = { onClick(char) },
         shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = buttonColor,
@@ -192,11 +188,23 @@ fun DefaultButton(
         contentPadding = PaddingValues(0.dp),
         modifier = modifier.size(65.dp)
     ) {
-        Text(
-            text = char, style = TextStyle(
-                fontSize = 25.sp, color = textColor, fontWeight = FontWeight.Normal
+        // TODO: Refactor the UI and the viewModel to allow for greater flexibility (icons and strings).
+        //  Maybe use a class instead of a string only.
+        if (char == "⌫") {
+            Icon(
+                Icons.Filled.KeyboardReturn,
+                contentDescription = null,
+                tint = textColor,
             )
-        )
+
+        } else {
+            Text(
+                text = char, style = TextStyle(
+                    fontSize = 25.sp, color = textColor, fontWeight = FontWeight.Normal
+                )
+            )
+        }
+
     }
 }
 
