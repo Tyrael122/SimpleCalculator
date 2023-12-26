@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             SimpleCalculatorTheme(darkTheme = true) {
                 Surface(
-                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
+                    modifier = Modifier.fillMaxSize(), color = backgroundColor
                 ) {
                     CalculatorApp()
                 }
@@ -114,7 +114,7 @@ private fun TextView(expressions: List<InputText>, result: String) {
 
         Text(
             text = result, style = TextStyle(
-                fontSize = 40.sp, fontWeight = FontWeight.Bold
+                fontSize = 40.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface
             ), textAlign = TextAlign.Right, modifier = Modifier.fillMaxWidth()
         )
     }
@@ -208,6 +208,8 @@ fun DefaultButton(
     }
 }
 
+// TODO: Create a theme.
+val backgroundColor = Color(0xFF22252D)
 val redColor = Color(0xFFEC7B7B)
 val buttonBackgroundColor = Color(0xFF292D36)
 val buttonColor = Color(0xFF272B33)
