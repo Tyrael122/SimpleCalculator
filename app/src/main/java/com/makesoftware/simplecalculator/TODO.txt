@@ -1,0 +1,2 @@
+1. Backspace button
+2. Brush up parentheses logic.

@@ -6,6 +6,7 @@ import com.ezylang.evalex.Expression
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.Locale
 
 class CalculatorViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(CalculatorUiState())
@@ -13,9 +14,7 @@ class CalculatorViewModel : ViewModel() {
 
     fun onButtonPressed(char: String) {
         when (char) {
-            in CalculatorButtonType.OPERATOR.listOfChars -> addToExpressionList(
-                char, CalculatorButtonType.OPERATOR
-            )
+            in CalculatorButtonType.OPERATOR.listOfChars -> addOperatorToExpressionList(char)
 
             in CalculatorButtonType.CLEAR.listOfChars -> onClearPressed()
             in CalculatorButtonType.EQUALS.listOfChars -> onEqualsPressed()
@@ -23,8 +22,36 @@ class CalculatorViewModel : ViewModel() {
         }
     }
 
+    private fun addOperatorToExpressionList(char: String) {
+        when (char) {
+            "√" -> addToExpressionList(
+                "$char(", CalculatorButtonType.OPERATOR
+            )
+
+            "()" -> addParenthesesToExpressionList()
+            else -> addToExpressionList(
+                char, CalculatorButtonType.OPERATOR
+            )
+        }
+    }
+
+    private fun addParenthesesToExpressionList() {
+        val numberOfOpenParentheses = uiState.value.expressions.count { it.text.contains("(") }
+        val numberOfCloseParentheses = uiState.value.expressions.count { it.text.contains(")") }
+
+        if (numberOfOpenParentheses > numberOfCloseParentheses) {
+            addToExpressionList(
+                ")", CalculatorButtonType.OPERATOR
+            )
+        } else {
+            addToExpressionList(
+                "(", CalculatorButtonType.OPERATOR
+            )
+        }
+    }
+
     private fun addInputToExpressionList(char: String) {
-        val expression = uiState.value.expression
+        val expression = uiState.value.expressions
         val lastInput = expression.lastOrNull()
 
         if (lastInput == null || lastInput.type == CalculatorButtonType.OPERATOR) {
@@ -42,32 +69,29 @@ class CalculatorViewModel : ViewModel() {
 
         _uiState.update {
             it.copy(
-                expression = newExpression
+                expressions = newExpression
             )
         }
     }
 
     private fun addToExpressionList(char: String, calculatorButtonType: CalculatorButtonType) {
-        val newExpression = uiState.value.expression.toMutableList()
+        val newExpression = uiState.value.expressions.toMutableList()
         newExpression.add(InputText(char, calculatorButtonType))
 
         _uiState.update {
             it.copy(
-                expression = newExpression
+                expressions = newExpression
             )
         }
     }
 
     private fun onEqualsPressed() {
-        val textExpression = uiState.value.expression.joinToString("") { it.text }.replace("x", "*")
+        val textExpression =
+            uiState.value.expressions.joinToString("") { it.text }.replace("x", "*")
+                .replace("√", "sqrt")
 
         val result = try {
-            val floatValue = Expression(textExpression).evaluate().numberValue.toFloat()
-            if (floatValue % 1 == 0F) {
-                floatValue.toInt()
-            } else {
-                floatValue
-            }
+            Expression(textExpression).evaluate().numberValue.toFloat()
 
         } catch (e: Exception) {
             Log.e("CalculatorViewModel", "Exception: ${e.message}")
@@ -81,20 +105,25 @@ class CalculatorViewModel : ViewModel() {
 
         _uiState.update {
             it.copy(
-                result = result.toString()
+                result = formatResult(result)
             )
         }
     }
 
+    private fun formatResult(result: Float): String {
+        val formatSpecifier = if (result % 1 == 0F) "%,.0f" else "%,.2f"
+        return String.format(Locale.ENGLISH, formatSpecifier, result)
+    }
+
     private fun onClearPressed() {
         _uiState.value = uiState.value.copy(
-            expression = emptyList(), result = "", error = ""
+            expressions = emptyList(), result = "", error = ""
         )
     }
 }
 
 data class CalculatorUiState(
-    val expression: List<InputText> = emptyList(), val result: String = "", val error: String = ""
+    val expressions: List<InputText> = emptyList(), val result: String = "", val error: String = ""
 )
 
 class InputText(
@@ -104,8 +133,14 @@ class InputText(
 enum class CalculatorButtonType(val listOfChars: List<String>) {
     INPUT_TO_EXPRESSION(emptyList()), OPERATOR(
         listOf(
-            "+", "-", "x", "/"
+            "+", "-", "x", "/", "%", "√", "()"
         )
     ),
-    CLEAR(listOf("C")), EQUALS(listOf("="))
+    CLEAR(listOf("C")), EQUALS(listOf("="));
+
+    companion object {
+        fun fromChar(char: String): CalculatorButtonType {
+            return values().firstOrNull { it.listOfChars.contains(char) } ?: INPUT_TO_EXPRESSION
+        }
+    }
 }
